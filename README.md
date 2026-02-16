@@ -1,31 +1,40 @@
-# Rockbuster Video Rental — SQL Analysis (PostgreSQL)
+# Rockbuster Customer & Revenue Analysis (SQL + Tableau)
 
-Analyzed Rockbuster’s customer base and payment activity to support a geographically targeted streaming launch strategy.
+Rockbuster Stealth is a global DVD rental company preparing for a streaming launch. This project answers key business questions about revenue drivers, customer geography, and high-value segments using PostgreSQL and visualizes results in Tableau.
 
-## Business questions
-- Where are customers located, and which countries represent the largest markets?
-- Are customers and revenue concentrated among a small group?
+## Business questions answered
+- Which movies contributed the most/least to revenue?
 - What is the average rental duration?
-- Which films contribute most/least to revenue?
+- Which countries are customers based in?
+- Where are high lifetime value customers located?
+- Do sales figures vary by geographic region?
 
-## Key results (high signal)
-- Total customers: 599; active: 584; inactive: 15.
-- Customers are globally distributed with regional concentration.
-- Revenue is disproportionately driven by a small group of customers.
+## Key results (from outputs)
+- Total customers: 599; Active: 584; Inactive: 15
+- Customers are globally distributed with concentration in a handful of countries
+- Revenue concentration exists among a subset of customers (high LTV segment)
 
 ## Deliverables
-- **Presentation:** /docs/rockbuster-presentation.pdf
-- **Data dictionary:** /docs/rockbuster-data-dictionary.pdf
-- **ERD:** /images/rockbuster-erd.png
-- **SQL queries:** /sql/02_queries.sql
-- **Outputs:** /outputs/rockbuster-sql-outputs.xlsx
+- **SQL (runnable):** `sql/02_queries.sql`
+- **Schema notes:** `sql/01_schema_notes.md`
+- **Outputs (aggregated):** `outputs/rockbuster-sql-outputs.xlsx`
+- **ERD image:** `images/rockbuster-erd.png`
+- **Presentation (PDF):** `docs/rockbuster-presentation.pdf`
+- **Data dictionary (PDF):** `docs/rockbuster-data-dictionary.pdf`
 
-## Tableau (interactive)
-- Customer Geography (Bubble Map): <paste link>
-- Top Customer Countries: <paste link>
-- High Value Customers: <paste link>
+## Tableau links (interactive)
+- Customer Geography (Bubble Map): <PASTE_LINK>
+- Top Customer Countries: <PASTE_LINK>
+- High Value Customers: <PASTE_LINK>
+
+## How to use
+1. Open `sql/01_schema_notes.md` for join paths + definitions.
+2. Run queries in `sql/02_queries.sql` in PostgreSQL.
+3. Compare results to the aggregated outputs in `/outputs`.
+4. View the Tableau links for interactive exploration.
 
 ## Tools
-PostgreSQL, SQL (joins/CTEs), Excel, Tableau
+PostgreSQL, SQL (joins/CTEs/window functions), Excel (outputs), Tableau
 
-*Completed as part of the CareerFoundry Databases & SQL for Analysts curriculum (project brief: “Rockbuster Stealth Data Analysis”).*
+## Note
+This project was completed as part of the [CareerFoundry](chatgpt://generic-entity?number=2) Databases & SQL curriculum.

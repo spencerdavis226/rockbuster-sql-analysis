@@ -4,7 +4,7 @@ Rockbuster Stealth is a global DVD rental company preparing for a streaming laun
 
 ## Start here (primary deliverable)
 **Presentation (PDF):** `docs/rockbuster-presentation.pdf`  
-This is the main deliverable — a concise slide deck with the business questions, approach, key findings, and recommendations.
+This is the main deliverable: a concise slide deck with the business questions, approach, key findings, and recommendations.
 
 ## Key findings
 - Customer base is global, with demand concentrated in a small set of countries.

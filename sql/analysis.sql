@@ -2,27 +2,36 @@
    Rockbuster Customer & Revenue Analysis
    SQL dialect: PostgreSQL
 
-   This file contains runnable queries used to generate portfolio
-   outputs and Tableau-ready aggregates.
+   Purpose
+   - Answer core business questions on customer geography, revenue drivers, and high-value segments.
+   - Produce Tableau/Excel-ready aggregates (export query results to CSV as needed).
 
-   Tip: Run section-by-section and export results as CSV when needed.
+   How to run
+   - Execute queries section-by-section in pgAdmin / DBeaver / psql.
+   - Assumes the Rockbuster schema is loaded into your default search_path (typically `public`).
    ============================================================ */
+
+/* Conventions
+   - Revenue: SUM(payment.amount). Payments are joined via payment → rental → inventory → film when attributing revenue to films.
+   - Customer geography: customer → address → city → country (customer home location).
+   - High-LTV customers: top decile by lifetime_value (SUM(payment.amount) per customer).
+*/
 
 
 /* ------------------------------------------------------------
-   SECTION A — Customer Overview (matches outputs spreadsheet)
-   Output: outputs/customer_overview.csv (or Excel tab)
+   SECTION A — Customer Overview
+   Output: customer_overview (tableau/csv export)
    ------------------------------------------------------------ */
 SELECT
   COUNT(*) AS total_customers,
-  SUM(CASE WHEN active = 1 THEN 1 ELSE 0 END) AS active_customers,
-  SUM(CASE WHEN active = 0 THEN 1 ELSE 0 END) AS inactive_customers
+  COUNT(*) FILTER (WHERE active = 1) AS active_customers,
+  COUNT(*) FILTER (WHERE active = 0) AS inactive_customers
 FROM customer;
 
 
 /* ------------------------------------------------------------
-   SECTION B — Customers & Revenue by Country (matches outputs)
-   Output: outputs/customers_revenue_by_country.csv
+   SECTION B — Customers & Revenue by Country
+   Output: customers_revenue_by_country (tableau/csv export)
    Notes:
    - Customer count uses DISTINCT customers
    - Revenue sums all payments made by customers in that country
@@ -41,12 +50,12 @@ JOIN country co
 LEFT JOIN payment p
   ON cu.customer_id = p.customer_id
 GROUP BY co.country
-ORDER BY customer_count DESC, total_revenue DESC;
+ORDER BY customer_count DESC, total_revenue DESC, co.country ASC;
 
 
 /* ------------------------------------------------------------
-   SECTION C — Top 10 Countries by Customer Count (matches outputs)
-   Output: outputs/top_10_countries_by_customer_count.csv
+   SECTION C — Top Countries by Customer Count
+   Output: top_countries_by_customer_count (tableau/csv export)
    ------------------------------------------------------------ */
 SELECT
   co.country,
@@ -59,25 +68,40 @@ JOIN city ci
 JOIN country co
   ON ci.country_id = co.country_id
 GROUP BY co.country
-ORDER BY customer_count DESC
-LIMIT 10;
+ORDER BY customer_count DESC, co.country ASC;
 
 
 /* ------------------------------------------------------------
-   SECTION D — Top 5 Customers by Total Amount Paid (matches outputs)
-   Output: outputs/top_5_customers_by_revenue.csv
+   SECTION D — Top Customers by Lifetime Value
+   Output: top_customers_lifetime_value (tableau/csv export)
+   Notes:
+   - Includes customer name + location to make the output presentation-ready.
+   - Lifetime value is defined as SUM(payment.amount) per customer.
    ------------------------------------------------------------ */
 SELECT
-  p.customer_id,
-  ROUND(SUM(p.amount), 2) AS total_amount_paid
+  cu.customer_id,
+  cu.first_name,
+  cu.last_name,
+  ci.city,
+  co.country,
+  ROUND(SUM(p.amount), 2) AS lifetime_value
 FROM payment p
-GROUP BY p.customer_id
-ORDER BY total_amount_paid DESC
-LIMIT 5;
+JOIN customer cu
+  ON p.customer_id = cu.customer_id
+JOIN address a
+  ON cu.address_id = a.address_id
+JOIN city ci
+  ON a.city_id = ci.city_id
+JOIN country co
+  ON ci.country_id = co.country_id
+GROUP BY
+  cu.customer_id, cu.first_name, cu.last_name, ci.city, co.country
+ORDER BY lifetime_value DESC, cu.customer_id ASC
+LIMIT 10;
 
 
 /* ============================================================
-   SECTION E — Films: Most / Least Revenue (board question)
+   SECTION E — Films: Most / Least Revenue
    ============================================================ */
 
 /* E1 — Top 10 films by revenue
@@ -95,7 +119,7 @@ JOIN inventory i
 JOIN film f
   ON i.film_id = f.film_id
 GROUP BY f.film_id, f.title
-ORDER BY total_revenue DESC
+ORDER BY total_revenue DESC, f.title ASC
 LIMIT 10;
 
 
@@ -115,7 +139,7 @@ JOIN film f
   ON i.film_id = f.film_id
 GROUP BY f.film_id, f.title
 HAVING SUM(p.amount) > 0
-ORDER BY total_revenue ASC
+ORDER BY total_revenue ASC, f.title ASC
 LIMIT 10;
 
 
@@ -140,7 +164,7 @@ ORDER BY f.title;
 
 
 /* ============================================================
-   SECTION F — Average Rental Duration (board question)
+   SECTION F — Rental Duration
    ============================================================ */
 
 /* F1 — Average catalog rental duration (film.rental_duration in days)
@@ -148,7 +172,7 @@ ORDER BY f.title;
 */
 SELECT
   ROUND(AVG(f.rental_duration), 2) AS avg_catalog_rental_duration_days
-FROM film f;
+FROM film;
 
 
 /* F2 — Average realized rental duration (return_date - rental_date)
@@ -163,11 +187,11 @@ WHERE r.return_date IS NOT NULL;
 
 
 /* ============================================================
-   SECTION G — High Lifetime Value Customers (board question)
+   SECTION G — High Lifetime Value Customers
    ============================================================ */
 
 /* G1 — Top 20 customers by lifetime revenue + country/city
-   Output: outputs/top_customers_ltv_with_location.csv
+   Output: top_customers_ltv_with_location (tableau/csv export)
 */
 SELECT
   cu.customer_id,
@@ -187,12 +211,13 @@ JOIN country co
   ON ci.country_id = co.country_id
 GROUP BY
   cu.customer_id, cu.first_name, cu.last_name, ci.city, co.country
-ORDER BY lifetime_value DESC
+ORDER BY lifetime_value DESC, cu.customer_id ASC
 LIMIT 20;
 
 
+-- Note: NTILE(10) assigns customers into deciles; decile = 1 is the top ~10% by lifetime_value.
 /* G2 — Where high-LTV customers are concentrated (by country)
-   Output: outputs/high_ltv_customers_by_country.csv
+   Output: high_ltv_customers_by_country (tableau/csv export)
    Definition: High-LTV = top 10% of customers by lifetime value
 */
 WITH customer_ltv AS (
@@ -228,11 +253,11 @@ ORDER BY high_ltv_customer_count DESC, high_ltv_revenue DESC;
 
 
 /* ============================================================
-   SECTION H — Do sales vary by region? (board question)
+   SECTION H — Revenue by Region
    ============================================================ */
 
 /* H1 — Revenue by country + revenue per customer (normalizes size)
-   Output: outputs/revenue_by_country_with_per_customer.csv
+   Output: revenue_by_country_with_per_customer (tableau/csv export)
 */
 SELECT
   co.country,
@@ -252,4 +277,24 @@ JOIN country co
 LEFT JOIN payment p
   ON cu.customer_id = p.customer_id
 GROUP BY co.country
-ORDER BY total_revenue DESC;
+ORDER BY total_revenue DESC, co.country ASC;
+
+
+/* ============================================================
+   SECTION Z — QA / Sanity Checks (optional)
+   Purpose: quick checks to validate joins and totals.
+   ============================================================ */
+
+/* Z1 — Total payments and total revenue */
+SELECT
+  COUNT(*) AS payment_rows,
+  ROUND(SUM(amount), 2) AS total_revenue
+FROM payment;
+
+/* Z2 — Customers with no payments (should be small / expected) */
+SELECT
+  COUNT(*) AS customers_without_payments
+FROM customer cu
+LEFT JOIN payment p
+  ON cu.customer_id = p.customer_id
+WHERE p.payment_id IS NULL;

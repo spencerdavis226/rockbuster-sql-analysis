@@ -156,8 +156,8 @@ This mirrors real-world analytics work in product, operations, and business inte
 
 - **SQL Analysis (runnable):** `sql/analysis.sql`
 - **Schema Notes:** `sql/schema_notes.md`
-- **Data Dictionary (PDF):** [`docs/rockbuster-data-dictionary.pdf`](docs/rockbuster-data-dictionary.pdf) fileciteturn4file0
-- **Presentation Deck (final deliverable):** [`docs/rockbuster-presentation.pdf`](docs/rockbuster-presentation.pdf) fileciteturn4file1
+- **Data Dictionary (PDF):** [`docs/rockbuster-data-dictionary.pdf`](docs/rockbuster-data-dictionary.pdf)
+- **Presentation Deck (final deliverable):** [`docs/rockbuster-presentation.pdf`](docs/rockbuster-presentation.pdf)
 - **Aggregated Outputs:** `outputs/rockbuster-sql-outputs.xlsx`
 
 ---

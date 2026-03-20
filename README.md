@@ -1,128 +1,225 @@
 # Rockbuster Customer & Revenue Analysis
 
-## Overview
-Rockbuster Stealth is a global DVD rental company preparing for a transition to streaming. This project analyzes transactional rental data using PostgreSQL to identify revenue drivers, geographic demand patterns, and high-value customer segments. Results are summarized in SQL outputs and visualized in Tableau to support strategic decision-making.
-
-This repository contains the full analytical workflow: schema review, query development, aggregated outputs, and presentation-ready visuals.
+SQL-based analysis of customer behavior, revenue concentration, and geographic demand patterns for a global DVD rental company preparing for a transition to streaming.
 
 ---
 
-## Business Objectives
-The analysis addresses the following questions:
+## Executive Summary
 
-- Which films generate the highest and lowest revenue?
-- What is the average rental duration (catalog vs. realized)?
-- Where are customers geographically concentrated?
-- Which customers represent the highest lifetime value (LTV)?
-- How does revenue vary by country and region?
+Rockbuster Stealth is a global DVD rental company evaluating strategic decisions as it prepares for a shift toward streaming. This project uses **PostgreSQL** to analyze transactional rental data and answer key business questions around:
+
+- revenue concentration
+- customer lifetime value
+- geographic demand patterns
+
+The analysis demonstrates how normalized relational data can be transformed into actionable business insight using **joins, CTEs, aggregations, and window functions**.
+
+### Key Takeaways
+
+- Revenue is concentrated among a relatively small group of high-value customers.
+- Customer demand is globally distributed but concentrated in a limited number of countries.
+- A subset of films generates disproportionately high rental revenue.
+- Geographic and customer segmentation can directly inform a targeted streaming rollout strategy.
+
+---
+
+## Visual Highlights
+
+### Customer Geography (Revenue & Customer Distribution)
+
+![Customer Geography Map](images/customer-geography-map.png)
+
+### Top Customers by Lifetime Value
+
+![Top Customers](images/top5_customers.png)
+
+---
+
+## Business Problem
+
+Rockbuster leadership needs visibility into **where revenue comes from**, **which customers drive value**, and **which markets matter most** as the company transitions to streaming.
+
+This project evaluates:
+
+- Which films generate the most revenue
+- Where customers are geographically concentrated
+- Which customers represent the highest lifetime value
+- How revenue varies across regions
+
+The goal is to move from raw transactional data to clear, decision-ready insight.
 
 ---
 
 ## Data Model
-The Rockbuster dataset includes customer, rental, payment, inventory, film, and geographic tables. Revenue attribution and customer geography are derived through structured joins across these entities.
+
+The dataset is a normalized relational schema consisting of:
+
+- fact tables: `payment`, `rental`, `inventory`
+- dimension tables: `customer`, `film`, `category`, `actor`, `language`, `store`, `address`, `city`, `country`
+- bridge tables: `film_actor`, `film_category`
 
 ![Entity Relationship Diagram](images/rockbuster-erd.png)
+
+### Key Join Logic
+
+**Revenue Attribution**
+
+```
+payment → rental → inventory → film
+```
+
+**Customer Geography**
+
+```
+customer → address → city → country
+```
 
 ---
 
 ## Methodology
 
-**Revenue Definition**
-Revenue is defined as `SUM(payment.amount)`. Film-level revenue is attributed through joins:
-`payment → rental → inventory → film`.
+### 1. Schema Understanding
 
-**Customer Geography**
-Customer location is derived via:
-`customer → address → city → country`.
+Reviewed relational structure to identify how transactions, customers, and products connect.
 
-**High Lifetime Value Segment**
-Customers are ranked by total lifetime revenue using window functions (NTILE) and segmented into deciles. The top decile represents the high-LTV segment.
+### 2. Revenue Definition
 
-All SQL queries are fully runnable and documented in `sql/analysis.sql`.
+Defined revenue as:
+
+```
+SUM(payment.amount)
+```
+
+Ensured correct attribution by joining through rental and inventory tables.
+
+### 3. Customer Segmentation
+
+- Calculated total lifetime revenue per customer
+- Used **window functions (NTILE)** to segment customers into value tiers
+- Identified top decile as high-LTV segment
+
+### 4. Geographic Analysis
+
+- Joined customer records to geographic tables
+- Analyzed customer and revenue distribution by country and city
+
+### 5. Output & Visualization
+
+- Generated SQL outputs for analysis
+- Exported tables to Excel and Tableau for visualization
 
 ---
 
-## Key Insights
+## Key Findings
 
-### Global Customer Distribution
-Revenue and customer counts are concentrated in a limited number of countries, with measurable variation in revenue per customer across regions.
+### 1. Customer demand is geographically concentrated
 
-![Customer Geography Map](images/customer-geography-map.png)
+Customers are globally distributed but heavily concentrated in a small number of countries.
 
-### Revenue Concentration Among Customers
-Revenue is unevenly distributed, with a small subset of customers contributing a disproportionate share of total payments.
+**Implication:** Expansion or marketing efforts should prioritize high-density markets rather than treating demand as evenly distributed.
 
-![Top Customers by Lifetime Value](images/top5_customers.png)
+### 2. Revenue is concentrated among high-value customers
 
-### Film-Level Revenue Variation
-Certain titles significantly outperform others in total rental revenue, indicating opportunities for targeted content strategy and promotional emphasis.
+A relatively small subset of customers contributes a disproportionate share of total revenue.
+
+**Implication:** Retention strategies targeting high-value customers would likely produce outsized impact.
+
+### 3. Revenue varies across markets
+
+Some regions generate more revenue per customer than others, indicating differences in customer value.
+
+**Implication:** Market prioritization should consider both customer count and revenue per customer.
+
+### 4. Film-level revenue is uneven
+
+A subset of titles significantly outperforms the rest.
+
+**Implication:** Content strategy should emphasize high-performing categories and titles.
 
 ---
 
-## Repository Structure
+## Why This Project Matters
 
-```
-rockbuster-sql-analysis/
-│
-├── docs/
-│   ├── rockbuster-data-dictionary.pdf
-│   └── rockbuster-presentation.pdf
-│
-├── images/
-│   ├── rockbuster-erd.png
-│   ├── customer-geography-map.png
-│   └── top5_customers.png
-│
-├── outputs/
-│   └── rockbuster-sql-outputs.xlsx
-│
-├── sql/
-│   ├── schema_notes.md
-│   └── analysis.sql
-│
-└── README.md
-```
+This project demonstrates the ability to:
+
+- work with normalized relational data
+- define metrics correctly across multiple joins
+- use SQL beyond basic queries (CTEs, window functions)
+- segment customers and analyze revenue distribution
+- translate SQL outputs into business insights
+
+This mirrors real-world analytics work in product, operations, and business intelligence roles.
 
 ---
 
 ## Deliverables
 
-- **Presentation Deck (PDF):** `docs/rockbuster-presentation.pdf`
-- **Data Dictionary (PDF):** `docs/rockbuster-data-dictionary.pdf`
 - **SQL Analysis (runnable):** `sql/analysis.sql`
-- **Schema Notes (joins + definitions):** `sql/schema_notes.md`
-- **Aggregated Outputs (Excel):** `outputs/rockbuster-sql-outputs.xlsx`
+- **Schema Notes:** `sql/schema_notes.md`
+- **Data Dictionary (PDF):** [`docs/rockbuster-data-dictionary.pdf`](docs/rockbuster-data-dictionary.pdf) fileciteturn4file0
+- **Presentation Deck (final deliverable):** [`docs/rockbuster-presentation.pdf`](docs/rockbuster-presentation.pdf) fileciteturn4file1
+- **Aggregated Outputs:** `outputs/rockbuster-sql-outputs.xlsx`
 
 ---
 
-## Tools & Techniques
+## Repository Structure
 
-- PostgreSQL
-- Complex joins across normalized schemas
-- Aggregations and grouping
-- Common Table Expressions (CTEs)
-- Window functions (NTILE, ranking)
-- Data validation / QA checks
-- Tableau (visualization)
+```text
+rockbuster-sql-analysis/
+├── docs/
+│   ├── data-dictionary.md
+│   ├── rockbuster-data-dictionary.pdf
+│   └── rockbuster-presentation.pdf
+├── images/
+│   ├── rockbuster-erd.png
+│   ├── customer-geography-map.png
+│   └── top5_customers.png
+├── outputs/
+│   └── rockbuster-sql-outputs.xlsx
+├── sql/
+│   ├── schema_notes.md
+│   └── analysis.sql
+└── README.md
+```
 
 ---
 
-## How to Reproduce the Analysis
+## How to Review This Project Quickly
 
-1. Load the Rockbuster schema into PostgreSQL.
-2. Review table relationships in `sql/schema_notes.md`.
-3. Execute queries in `sql/analysis.sql` section by section.
-4. Export result sets as CSV if needed for visualization.
-5. Use the Tableau dashboard links below for interactive exploration (optional).
+1. Read the **Executive Summary**
+2. Review the **Visual Highlights**
+3. Skim the **Key Findings**
+4. Open the **presentation deck** (final deliverable)
+5. Review SQL queries for technical detail
 
 ---
 
 ## Tableau Dashboards
-- Customer Geography (Bubble Map): https://public.tableau.com/views/RockbusterBubbleMap_17658994601690/Sheet1?:showVizHome=no
+
+- Customer Geography: https://public.tableau.com/views/RockbusterBubbleMap_17658994601690/Sheet1?:showVizHome=no
 - Top Customer Countries: https://public.tableau.com/views/RockbusterTop10Cities_17659038031120/Sheet1?:showVizHome=no
 - High Value Customers: https://public.tableau.com/views/Top5CustomersRockbusterNew/Sheet1?:showVizHome=no
 
 ---
 
-## Summary
-This project demonstrates end-to-end analytical workflow: structured data modeling, revenue attribution logic, customer segmentation, and geographic analysis using SQL. The repository is organized to reflect professional analytical practice, with clear documentation, reproducible queries, and presentation-ready outputs.
+## Limitations
+
+- Uses a structured sample dataset rather than production data
+- Focuses on descriptive and segmentation analysis rather than predictive modeling
+- Does not include behavioral features beyond transaction history
+
+---
+
+## Future Improvements
+
+- Convert data dictionary into a markdown version for faster GitHub readability
+- Add summary SQL script highlighting key queries only
+- Build a unified Tableau dashboard combining all insights
+- Extend segmentation beyond revenue (frequency, recency)
+
+---
+
+## Author
+
+**Spencer Davis**
+Data Analyst Portfolio Project

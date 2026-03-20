@@ -4,7 +4,15 @@
 
    Purpose
    - Answer core business questions on customer geography, revenue drivers, and high-value segments.
+   - Provide both recruiter-friendly summary queries and deeper analysis queries in one file.
    - Produce Tableau/Excel-ready aggregates (export query results to CSV as needed).
+
+   Recommended review order
+   1. SECTION 0 — Interview / Portfolio Summary Queries
+   2. SECTION B — Customers & Revenue by Country
+   3. SECTION D — Top Customers by Lifetime Value
+   4. SECTION G — High Lifetime Value Customers
+   5. SECTION E — Films: Most / Least Revenue
 
    How to run
    - Execute queries section-by-section in pgAdmin / DBeaver / psql.
@@ -16,6 +24,131 @@
    - Customer geography: customer → address → city → country (customer home location).
    - High-LTV customers: top decile by lifetime_value (SUM(payment.amount) per customer).
 */
+
+/* ============================================================
+   SECTION 0 — Interview / Portfolio Summary Queries
+   Purpose: fastest review path for recruiters and hiring managers.
+   ============================================================ */
+
+/* 0.1 — Total customers + active/inactive split */
+SELECT
+  COUNT(*) AS total_customers,
+  COUNT(*) FILTER (WHERE active = 1) AS active_customers,
+  COUNT(*) FILTER (WHERE active = 0) AS inactive_customers
+FROM customer;
+
+
+/* 0.2 — Top 10 countries by customer count */
+SELECT
+  co.country,
+  COUNT(DISTINCT cu.customer_id) AS customer_count
+FROM customer cu
+JOIN address a
+  ON cu.address_id = a.address_id
+JOIN city ci
+  ON a.city_id = ci.city_id
+JOIN country co
+  ON ci.country_id = co.country_id
+GROUP BY co.country
+ORDER BY customer_count DESC, co.country ASC
+LIMIT 10;
+
+
+/* 0.3 — Revenue by country with customer normalization */
+SELECT
+  co.country,
+  COUNT(DISTINCT cu.customer_id) AS customer_count,
+  ROUND(COALESCE(SUM(p.amount), 0), 2) AS total_revenue,
+  ROUND(
+    COALESCE(SUM(p.amount), 0) / NULLIF(COUNT(DISTINCT cu.customer_id), 0),
+    2
+  ) AS revenue_per_customer
+FROM customer cu
+JOIN address a
+  ON cu.address_id = a.address_id
+JOIN city ci
+  ON a.city_id = ci.city_id
+JOIN country co
+  ON ci.country_id = co.country_id
+LEFT JOIN payment p
+  ON cu.customer_id = p.customer_id
+GROUP BY co.country
+ORDER BY total_revenue DESC, co.country ASC;
+
+
+/* 0.4 — Top 10 customers by lifetime value */
+SELECT
+  cu.customer_id,
+  cu.first_name,
+  cu.last_name,
+  ci.city,
+  co.country,
+  ROUND(SUM(p.amount), 2) AS lifetime_value
+FROM payment p
+JOIN customer cu
+  ON p.customer_id = cu.customer_id
+JOIN address a
+  ON cu.address_id = a.address_id
+JOIN city ci
+  ON a.city_id = ci.city_id
+JOIN country co
+  ON ci.country_id = co.country_id
+GROUP BY
+  cu.customer_id, cu.first_name, cu.last_name, ci.city, co.country
+ORDER BY lifetime_value DESC, cu.customer_id ASC
+LIMIT 10;
+
+
+/* 0.5 — High-LTV customer concentration by country
+   Definition: High-LTV = top decile by lifetime_value
+*/
+WITH customer_ltv AS (
+  SELECT
+    p.customer_id,
+    SUM(p.amount) AS lifetime_value
+  FROM payment p
+  GROUP BY p.customer_id
+),
+ltv_ranked AS (
+  SELECT
+    customer_id,
+    lifetime_value,
+    NTILE(10) OVER (ORDER BY lifetime_value DESC) AS decile
+  FROM customer_ltv
+)
+SELECT
+  co.country,
+  COUNT(DISTINCT cu.customer_id) AS high_ltv_customer_count,
+  ROUND(SUM(cl.lifetime_value), 2) AS high_ltv_revenue
+FROM ltv_ranked cl
+JOIN customer cu
+  ON cl.customer_id = cu.customer_id
+JOIN address a
+  ON cu.address_id = a.address_id
+JOIN city ci
+  ON a.city_id = ci.city_id
+JOIN country co
+  ON ci.country_id = co.country_id
+WHERE cl.decile = 1
+GROUP BY co.country
+ORDER BY high_ltv_customer_count DESC, high_ltv_revenue DESC;
+
+
+/* 0.6 — Top 10 films by revenue */
+SELECT
+  f.film_id,
+  f.title,
+  ROUND(SUM(p.amount), 2) AS total_revenue
+FROM payment p
+JOIN rental r
+  ON p.rental_id = r.rental_id
+JOIN inventory i
+  ON r.inventory_id = i.inventory_id
+JOIN film f
+  ON i.film_id = f.film_id
+GROUP BY f.film_id, f.title
+ORDER BY total_revenue DESC, f.title ASC
+LIMIT 10;
 
 
 /* ------------------------------------------------------------
@@ -73,7 +206,7 @@ ORDER BY customer_count DESC, co.country ASC;
 
 /* ------------------------------------------------------------
    SECTION D — Top Customers by Lifetime Value
-   Output: top_customers_lifetime_value (tableau/csv export)
+   Output: top_customers_lifetime_value (detailed table / tableau export)
    Notes:
    - Includes customer name + location to make the output presentation-ready.
    - Lifetime value is defined as SUM(payment.amount) per customer.
@@ -190,32 +323,36 @@ WHERE r.return_date IS NOT NULL;
    SECTION G — High Lifetime Value Customers
    ============================================================ */
 
-/* G1 — Top 20 customers by lifetime revenue + country/city
-   Output: top_customers_ltv_with_location (tableau/csv export)
+/* G1 — Lifetime value decile distribution
+   Output: customer_ltv_deciles (analysis / presentation support)
+   Purpose:
+   - Show how customer value is distributed across deciles
+   - Support the claim that a relatively small subset of customers drives disproportionate revenue
 */
+WITH customer_ltv AS (
+  SELECT
+    p.customer_id,
+    SUM(p.amount) AS lifetime_value
+  FROM payment p
+  GROUP BY p.customer_id
+),
+ltv_ranked AS (
+  SELECT
+    customer_id,
+    lifetime_value,
+    NTILE(10) OVER (ORDER BY lifetime_value DESC) AS decile
+  FROM customer_ltv
+)
 SELECT
-  cu.customer_id,
-  cu.first_name,
-  cu.last_name,
-  ci.city,
-  co.country,
-  ROUND(SUM(p.amount), 2) AS lifetime_value
-FROM payment p
-JOIN customer cu
-  ON p.customer_id = cu.customer_id
-JOIN address a
-  ON cu.address_id = a.address_id
-JOIN city ci
-  ON a.city_id = ci.city_id
-JOIN country co
-  ON ci.country_id = co.country_id
-GROUP BY
-  cu.customer_id, cu.first_name, cu.last_name, ci.city, co.country
-ORDER BY lifetime_value DESC, cu.customer_id ASC
-LIMIT 20;
+  decile,
+  COUNT(*) AS customer_count,
+  ROUND(SUM(lifetime_value), 2) AS total_revenue,
+  ROUND(AVG(lifetime_value), 2) AS avg_lifetime_value
+FROM ltv_ranked
+GROUP BY decile
+ORDER BY decile ASC;
 
 
--- Note: NTILE(10) assigns customers into deciles; decile = 1 is the top ~10% by lifetime_value.
 /* G2 — Where high-LTV customers are concentrated (by country)
    Output: high_ltv_customers_by_country (tableau/csv export)
    Definition: High-LTV = top 10% of customers by lifetime value
@@ -282,7 +419,7 @@ ORDER BY total_revenue DESC, co.country ASC;
 
 /* ============================================================
    SECTION Z — QA / Sanity Checks (optional)
-   Purpose: quick checks to validate joins and totals.
+   Purpose: quick checks to validate totals and identify obvious data issues before presenting results.
    ============================================================ */
 
 /* Z1 — Total payments and total revenue */
